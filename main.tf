@@ -3,17 +3,15 @@ provider "aws" {
 }
 
 # Create VPC
-resource "aws_vpc" "main" {
-  cidr_block = var.vpc_cidr
-
-  tags = {
-    Name = "my-vpc"
-  }
+module "vpc" {
+  source = "./modules/vpc"
+  vpc_cidr = var.vpc_cidr
+  vpc_name = var.vpc_name
 }
 
 # Create Public Subnet
 resource "aws_subnet" "public_subnet" {
-  vpc_id                  = aws_vpc.main.id
+  vpc_id                  = module.vpc.vpc_id
   cidr_block              = var.public_subnet_cidr
   map_public_ip_on_launch = true
 
@@ -24,7 +22,7 @@ resource "aws_subnet" "public_subnet" {
 
 # Create Private Subnet
 resource "aws_subnet" "private_subnet" {
-  vpc_id     = aws_vpc.main.id
+  vpc_id     = module.vpc.vpc_id
   cidr_block = var.private_subnet_cidr
 
   tags = {
@@ -34,8 +32,7 @@ resource "aws_subnet" "private_subnet" {
 
 # aws_internet_gateway
 resource "aws_internet_gateway" "my_IGW" {
-  vpc_id = aws_vpc.main.id
-
+  vpc_id = module.vpc.vpc_id
   tags = {
     Name = "main"
   }
@@ -43,7 +40,7 @@ resource "aws_internet_gateway" "my_IGW" {
 
 # create route table
 resource "aws_route_table" "public_rt" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   tags = {
     Name = "public-rt"
@@ -82,7 +79,7 @@ resource "aws_nat_gateway" "my_NAT" {
 
 # private route table
 resource "aws_route_table" "private_rt" {
-  vpc_id = aws_vpc.main.id
+  vpc_id = module.vpc.vpc_id
 
   tags = {
     Name = "private_rt"
@@ -108,7 +105,7 @@ resource "aws_route_table_association" "private_assoc" {
 resource "aws_security_group" "public_sg" {
   name        = "public-sg"
   description = "Allow SSH access"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = module.vpc.vpc_id
 
   ingress {
     description = "SSH from my laptop"
@@ -143,7 +140,7 @@ resource "aws_security_group" "public_sg" {
 resource "aws_security_group" "private_sg" {
   name        = "private-sg"
   description = "Allow SSH only from public SG"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = module.vpc.vpc_id
 
   ingress {
     description     = "SSH from public EC2"
